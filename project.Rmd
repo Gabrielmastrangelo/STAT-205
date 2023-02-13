@@ -5,10 +5,11 @@ output: html_notebook
 
 # Observational Study of Historical Behavior of Interest and Inflation Rates in Brazil and USA
 
-Push the changes to the github
-OBS: $ git push -u origin main
+## Introduction:
 
-IMPORTANT, BOTH CPI AND INTEREST RATE ARE ANNUALIZED FOR US
+## Methodology:
+
+## Conclusion:
 
 ### Importing libraries
 ```{r}
@@ -24,6 +25,12 @@ This excel files were downloaded from the FRED database of economical and financ
 ### Important notes:
 + The CPI is an index, to compute the annualized inflation rate, we need to compute (cpi_t12/cpi_0), since we have monthly data.
 + The interest rate is already annnualized
+
+CPI: The Consumer Price Index for All Urban Consumers (CPIAUCSL) is a measure of inflation and the buying habits of urban consumers. It includes prices for food, clothing, shelter, transportation, services, and sales taxes. The index is calculated by averaging price changes with weights representing their importance in consumer spending. 
+
+
+https://fred.stlouisfed.org/series/FEDFUNDS LINK interest rate
+https://fred.stlouisfed.org/series/CPIAUCSL LINK inflation rate
 ```{r}
 # https://fred.stlouisfed.org/series/FEDFUNDS for description
 cpi_us = read_excel('raw_data/CPIAUCSL.xls', skip = 10)
@@ -40,7 +47,7 @@ colnames(data_us) <- c('observation_date', 'interest_us', 'inflation_us')
 
 data_us$interest_us <- data_us$interest_us/100
 
-head(data_us)
+data_us
 ```
 
 ## Collecting Brazil Data
@@ -59,9 +66,9 @@ id = 4389)
 brazil_interest_rate$value <- brazil_interest_rate$value/100 #save it in decimal format
 
 #merge both dataframes
-data_br <- merge(brazil_cpi[c('ref.date','value')], brazil_interest_rate[c('ref.date','value')],by="ref.date")
+data_br <- merge(brazil_interest_rate[c('ref.date','value')],brazil_cpi[c('ref.date','value')],by="ref.date")
 
-colnames(data_br) <- c('observation_date', 'inflation_brazil', 'interest_brazil')
+colnames(data_br) <- c('observation_date', 'interest_brazil', 'inflation_brazil')
 
 head(data_br)
 ```
@@ -73,17 +80,15 @@ subset_us <- colnames(data_us)[-1]
 subset_br <- colnames(data_br)[-1]
 
 summary(data_us[subset_us])
-
 summary(data_br[subset_br])
-
 ```
 ## Boxplot Data
 ```{r}
 labels <- c(
-  replicate(length(data_us$interest_us), 'Interest USA'),
-  replicate(length(data_us$inflation_us), 'Inflation USA'),
-  replicate(length(data_br$interest_br), 'Interest BR'),
-  replicate(length(data_br$inflation_br), 'Inflation BR')
+  replicate(length(data_us$interest_us), 'Interest'),
+  replicate(length(data_us$inflation_us), 'Inflation'),
+  replicate(length(data_br$interest_br), 'Interest'),
+  replicate(length(data_br$inflation_br), 'Inflation')
 )
 
 values <- c(
@@ -104,16 +109,15 @@ boxplot_data <- data.frame(
   Country = country
 )
 
-head(boxplot_data)
-
-ggplot(boxplot_data, aes(x=category, y=value, fill = Country)) +
+ggplot(boxplot_data, aes(x=category, y=value, fill=category)) +
   geom_boxplot() + 
   labs(
     y = 'Annualized Rate',
     x = 'Category',
     title = 'Destribution of Interest and Inflation Rates by Country'
   ) +
-  scale_y_continuous(labels = scales::percent)
+  scale_y_continuous(labels = scales::percent) +
+  facet_grid(. ~ Country)
 ```
 
 Save the data_frame in a xlsx file
@@ -153,30 +157,62 @@ ggplot(data=data_us, aes(observation_date)) +
 head(time_series)
 ```
 
-# Analyzing Relation between change in Interest Rate over Interest Rates
 ```{r}
-# To create the inflation rate in pp%
-  #cpi <- cpi %>%
-   # mutate(inflation_rate_annual =  CPIAUCSL/lag(CPIAUCSL, 12)-1 )# %>% LATER WHEN WE DECIDE TO COMPUTE THE CHANGE
-    #mutate(change_inflation = (inflation_rate_annual-lag(inflation_rate_annual)))
-delta_us <- data_us %>% 
-  mutate(change_inflation_us = inflation_us-lag(inflation_us, 1)) %>%
-  mutate(change_interest_us = interest_us-lag(interest_us, 1))
+ggplot(data = data_us, aes(x=interest_us, y=inflation_us)) +
+  geom_point() +
+  ggtitle("Interest and Inflation Rate USA")+
+  ylab("Annualized Inflation Rate") +
+  xlab("Annualized Interest Rate") +
+  scale_y_continuous(labels = scales::percent)+
+  scale_x_continuous(labels = scales::percent)
 
-delta_br <- data_br %>% 
-  mutate(change_inflation_br = inflation_brazil-lag(inflation_brazil, 1)) %>%
-  mutate(change_interest_br = interest_brazil-lag(interest_brazil, 1))
-
-ggplot(data = delta_us, aes(x=change_interest_us, y=change_inflation_us)) +
-  geom_hex()
-```
-```{r}
-test <- data_us %>% 
-  mutate(change_inflation_us = inflation_us/lag(inflation_us, 1)-1) %>%
-  mutate(change_interest_us = interest_us/lag(interest_us, 1)-1)
-
-ggplot(data = test, aes(x=change_interest_us, y=change_inflation_us)) +
-  geom_point()
 ```
 
+
+```{r}
+ggplot(data = data_br, aes(x=interest_brazil, y=inflation_brazil)) +
+  geom_point()+
+  ggtitle("Interest and Inflation Rate Brazil")+
+  ylab("Annualized Inflation Rate") +
+  xlab("Annualized Interest Rate") +
+  scale_y_continuous(labels = scales::percent)+
+  scale_x_continuous(labels = scales::percent)
+
+
+```
+```{r}
+quantiles_us <- quantile(data_us$inflation_us)
+iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
+
+max_range =  quantiles_us[[4]] + 1.5*iqr_
+min_range = quantiles_us[[2]] - 1.5*iqr_
+
+ggplot(data=data_us, aes(observation_date)) +
+  geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
+  #geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
+  ggtitle("Interest and Inflation Rates Over Time")+
+  ylab("Annualized Rate") +
+  xlab("Time") +
+  geom_hline(yintercept=max_range, linetype="dashed", 
+                color = "blue", size=1) +
+  geom_hline(yintercept=min_range, linetype="dashed", 
+                color = "blue", size=1) +
+  scale_y_continuous(labels = scales::percent) 
+ 
+
+
+```
+
+```{r}
+quantiles_us <- quantile(data_us$inflation_us)
+iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
+
+max_range =  quantiles_us[[4]] + 1.5*iqr_
+min_range = quantiles_us[[2]] - 1.5*iqr_
+
+subset <- data_us %>% filter(inflation_us > max_range)
+str(subset$observation_date)
+
+unique(format(subset$observation_date,"%Y"))
+```
 
