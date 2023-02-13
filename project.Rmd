@@ -3,83 +3,180 @@ title: "R Notebook"
 output: html_notebook
 ---
 
+# Observational Study of Historical Behavior of Interest and Inflation Rates in Brazil and USA
+
 Push the changes to the github
 OBS: $ git push -u origin main
 
-Importing libraries
+IMPORTANT, BOTH CPI AND INTEREST RATE ARE ANNUALIZED FOR US
+
+### Importing libraries
 ```{r}
-library("tidyverse")
-library("ggplot2")
-library('readxl')
-
-  
-cpi = read_excel('raw_data/CPIAUCSL.xls', skip = 10)
-interest_rate = read_excel('raw_data/FEDFUNDS.xls', skip = 10)
-
-head(interest_rate)
+library("tidyverse") #Manipulate Data
+library("ggplot2") #Library for Data Visualization
+library('readxl') #Read data from excel
+library('GetBCBData') #Library to help to collect data from the BCB API (Central Bank of Brazil)
 ```
+## Collecting USA Data
 
-We compute the last 12 months inflation rate
+This excel files were downloaded from the FRED database of economical and financial data from USA.
+[ADD DESCRIPTION OF THE DATA, SEARCH IF FROM THE FRED WEBSITE]
+### Important notes:
++ The CPI is an index, to compute the annualized inflation rate, we need to compute (cpi_t12/cpi_0), since we have monthly data.
++ The interest rate is already annnualized
 ```{r}
-# To create the inflation rate in pp%
-cpi <- cpi %>%
-  mutate(inflation_rate_annual =  (CPIAUCSL/lag(CPIAUCSL, 12)-1)*100 ) %>%
-  mutate(change_inflation = (inflation_rate_annual-lag(inflation_rate_annual)))
+# https://fred.stlouisfed.org/series/FEDFUNDS for description
+cpi_us = read_excel('raw_data/CPIAUCSL.xls', skip = 10)
+interest_rate_us = read_excel('raw_data/FEDFUNDS.xls', skip = 10)
+cpi_us <- cpi_us %>%
+  mutate(inflation_rate_annual =  CPIAUCSL/lag(CPIAUCSL, 12)-1 )# %>% LATER WHEN WE DECIDE TO COMPUTE THE CHANGE
+  #mutate(change_inflation = (inflation_rate_annual-lag(inflation_rate_annual)))
 
-tail(cpi)
-```
+inflation_rate_us <- cpi_us[c('observation_date', 'inflation_rate_annual')]
 
-
-
-```{r}
 #Merge both databases
-data <- merge(interest_rate, cpi,by="observation_date")
+data_us <- merge(interest_rate_us, inflation_rate_us,by="observation_date")
+colnames(data_us) <- c('observation_date', 'interest_us', 'inflation_us')
 
-data <- data %>%
-  mutate(change_interest_rate = (FEDFUNDS-lag(FEDFUNDS))) 
+data_us$interest_us <- data_us$interest_us/100
 
-
-head(data)
+head(data_us)
 ```
 
+## Collecting Brazil Data
+We will collect the CDI from Brazil as an proxy of the interest rate, and the IPCA which is a proxy of the Brazillian CPI. We will use a library to help us collect the data from the BCB API.
+```{r}
+
+#IPCA its brazillian CPI, it comes in monthly rate
+brazil_cpi <- GetBCBData::gbcbd_get_series(
+id = 433)
+# TO ANNUALIZE THE DATA and save it in decimal format
+brazil_cpi$value <- (brazil_cpi$value/100+1)^12-1 #To convert the data into annualized IPCA
+
+# overnight rate in brazil annulized (base 252)
+brazil_interest_rate <- GetBCBData::gbcbd_get_series(
+id = 4389)
+brazil_interest_rate$value <- brazil_interest_rate$value/100 #save it in decimal format
+
+#merge both dataframes
+data_br <- merge(brazil_cpi[c('ref.date','value')], brazil_interest_rate[c('ref.date','value')],by="ref.date")
+
+colnames(data_br) <- c('observation_date', 'inflation_brazil', 'interest_brazil')
+
+head(data_br)
+```
+
+## Descriptive Stats
+
+```{r}
+subset_us <- colnames(data_us)[-1]
+subset_br <- colnames(data_br)[-1]
+
+summary(data_us[subset_us])
+
+summary(data_br[subset_br])
+
+```
+## Boxplot Data
+```{r}
+labels <- c(
+  replicate(length(data_us$interest_us), 'Interest USA'),
+  replicate(length(data_us$inflation_us), 'Inflation USA'),
+  replicate(length(data_br$interest_br), 'Interest BR'),
+  replicate(length(data_br$inflation_br), 'Inflation BR')
+)
+
+values <- c(
+  data_us$interest_us, 
+  data_us$inflation_us,
+  data_br$interest_br,
+  data_br$inflation_br
+)
+
+country <- c(
+  replicate(length(data_us$interest_us)*2, 'USA'),
+  replicate(length(data_br$interest_br)*2, 'Brazil')
+)
+
+boxplot_data <- data.frame(
+  value =  values,
+  category = labels,
+  Country = country
+)
+
+head(boxplot_data)
+
+ggplot(boxplot_data, aes(x=category, y=value, fill = Country)) +
+  geom_boxplot() + 
+  labs(
+    y = 'Annualized Rate',
+    x = 'Category',
+    title = 'Destribution of Interest and Inflation Rates by Country'
+  ) +
+  scale_y_continuous(labels = scales::percent)
+```
+
+Save the data_frame in a xlsx file
 ```{r}
 #library("writexl")
 #write_xlsx(data,"merged_data.xlsx")
 ```
 
-Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+## Time Series for both Countries
+
+Merge Data
+```{r}
+
+ggplot(data=data_br, aes(observation_date)) +
+  #geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
+  #geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
+  geom_line(aes(y = interest_brazil, colour = "Interest Rate Brazil")) +
+  geom_line(aes(y = inflation_brazil, colour = "Inflation Rate Brazil"))+
+  ggtitle("Interest and Inflation Rates Over Time")+
+  ylab("Annualized Rate") +
+  xlab("Time") +
+  scale_y_continuous(labels = scales::percent)
+head(time_series)
+```
+
+
 ```{r}
 library(ggplot2)
 
-ggplot(data=data, aes(observation_date)) +
-  geom_line(aes(y = inflation_rate_annual, colour = "Inflation Rate"))+
-  geom_line(aes(y = FEDFUNDS, colour = "Interest Rate"))
+ggplot(data=data_us, aes(observation_date)) +
+  geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
+  geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
+  ggtitle("Interest and Inflation Rates Over Time")+
+  ylab("Annualized Rate") +
+  xlab("Time") +
+  scale_y_continuous(labels = scales::percent)
+head(time_series)
 ```
 
+# Analyzing Relation between change in Interest Rate over Interest Rates
 ```{r}
-columns <- c('inflation_rate_annual', 'FEDFUNDS')
+# To create the inflation rate in pp%
+  #cpi <- cpi %>%
+   # mutate(inflation_rate_annual =  CPIAUCSL/lag(CPIAUCSL, 12)-1 )# %>% LATER WHEN WE DECIDE TO COMPUTE THE CHANGE
+    #mutate(change_inflation = (inflation_rate_annual-lag(inflation_rate_annual)))
+delta_us <- data_us %>% 
+  mutate(change_inflation_us = inflation_us-lag(inflation_us, 1)) %>%
+  mutate(change_interest_us = interest_us-lag(interest_us, 1))
 
-long_data = stack(data[columns])
+delta_br <- data_br %>% 
+  mutate(change_inflation_br = inflation_brazil-lag(inflation_brazil, 1)) %>%
+  mutate(change_interest_br = interest_brazil-lag(interest_brazil, 1))
 
-
-library(ggplot2)
-ggplot(long_data, aes(x = ind, y = values)) +
-  geom_boxplot()
+ggplot(data = delta_us, aes(x=change_interest_us, y=change_inflation_us)) +
+  geom_hex()
 ```
 ```{r}
-change_interest_rate = data[c('change_interest_rate')]
+test <- data_us %>% 
+  mutate(change_inflation_us = inflation_us/lag(inflation_us, 1)-1) %>%
+  mutate(change_interest_us = interest_us/lag(interest_us, 1)-1)
 
-increase_interest = change_interest_rate[change_interest_rate>0]
-decrease_interest = change_interest_rate[change_interest_rate<0]
-
-increase_df = data.frame(change_interest = increase_interest, label = replicate(length(increase_interest), 'Increase'))
-
-decrease_interest = data.frame(change_interest = abs(decrease_interest), label = replicate(length(decrease_interest), 'Decrease'))
-
-changes_interest = rbind(increase_df, decrease_interest)
-
-ggplot(changes_interest, aes(x = label, y = change_interest)) +
-  geom_boxplot()
+ggplot(data = test, aes(x=change_interest_us, y=change_inflation_us)) +
+  geom_point()
 ```
 
 
