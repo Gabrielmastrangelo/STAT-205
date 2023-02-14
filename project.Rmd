@@ -124,7 +124,7 @@ Save the data_frame in a xlsx file
 ```{r}
 library("writexl")
 write_xlsx(data_br,"data_br.xlsx")
-write_xlsx(data_us,"data_br.xlsx")
+write_xlsx(data_us,"data_us.xlsx")
 ```
 
 ## Time Series for both Countries
