@@ -70,7 +70,7 @@ data_br <- merge(brazil_interest_rate[c('ref.date','value')],brazil_cpi[c('ref.d
 
 colnames(data_br) <- c('observation_date', 'interest_brazil', 'inflation_brazil')
 
-head(data_br)
+data_br
 ```
 
 ## Descriptive Stats
@@ -122,8 +122,9 @@ ggplot(boxplot_data, aes(x=category, y=value, fill=category)) +
 
 Save the data_frame in a xlsx file
 ```{r}
-#library("writexl")
-#write_xlsx(data,"merged_data.xlsx")
+library("writexl")
+write_xlsx(data_br,"data_br.xlsx")
+write_xlsx(data_us,"data_br.xlsx")
 ```
 
 ## Time Series for both Countries
@@ -214,5 +215,21 @@ subset <- data_us %>% filter(inflation_us > max_range)
 str(subset$observation_date)
 
 unique(format(subset$observation_date,"%Y"))
+```
+
+# Influence of US interest rate in BR interest rate
+```{r}
+data_br$observation_date <- as.POSIXct(data_br$observation_date)
+
+merged_data <- merge(data_br, data_us, by="observation_date")
+
+ggplot(data = merged_data, aes(x=interest_us, y=interest_brazil)) +
+  geom_point() +
+  ggtitle("Relationship between interest rate in Brazil and USA")+
+  ylab("Interest Rate Brazil") +
+  xlab("Interest Rate USA") +
+  scale_y_continuous(labels = scales::percent)+
+  scale_x_continuous(labels = scales::percent)
+
 ```
 
