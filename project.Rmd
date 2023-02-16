@@ -1,6 +1,7 @@
 ---
 title: "Interest x Inflation Rates"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 ---
@@ -9,15 +10,11 @@ output:
 
 + In recent months, there has been a significant rise in inflation and interest rates around the world. This is largely due to factors such as supply chain disruptions, government stimulus measures, and a rebounding global economy after the COVID-19 pandemic.
 + Interest rates can have a significant impact on our daily lives, as they affect the cost of borrowing money for purchases such as homes, cars, and credit card debt. They also influence the return on savings and investments, such as bank accounts, bonds, and stocks.
-+ We gather inflation and interest rates between the USA and Brazil, and compare their distributions. To see if they seem to follow the same distribution, or if they are different. 
-+ We also want to investigate whether the inflation and interest rates are associated, if they move in the same direction. Are high inflation rates related to high interest rates and vice-versa?
-
-CPI: The Consumer Price Index is a measure of inflation and the buying habits of urban consumers. 
-- It includes prices for food, clothing, shelter, transportation, services, and sales taxes. 
-- The index is calculated by averaging price changes with weights representing their importance in consumer spending. 
-
-- The CPI is an index, to compute the annualized inflation rate, we need to compute (cpi_t12/cpi_0), since we have monthly data.
-+ The interest rate is already annnualized
++ We gather inflation and interest rates for US and Brazil:
+  + We compare their distributions. To see if they are different or if they follow the same distribution.
+  + We also want to investigate whether the inflation and interest rates are associated:
+    + Do they move in the same direction?
+    + Are high inflation rates related to high interest rates and vice-versa?
 
 ## Methodology:
 
@@ -131,20 +128,23 @@ ggplot(boxplot_data, aes(x=category, y=value, fill=category)) +
   scale_y_continuous(labels = scales::percent) +
   facet_grid(. ~ Country) +
   theme(legend.position="bottom", legend.title= element_blank())
+
+
 ```
 
 + The boxplot is used to compare the distribution of the inflation and interest rates, among each other, and among the countries.
 + Brazil:
-+ The inflation and interest rates in Brazil have a similar dispersion.
-+ And the interest rates in Brazil are left skewed.
-+ The median of the interest rates is significantly larger than the median of inflation rates.
-* US:
-+ The inflation rates are less dispersed than the interest rates.
-+ The median of the interest and inflation rate is not that different.
-+ We have many outliers for both inflation and interest rates.
+  + The inflation and interest rates in Brazil have a similar dispersion.
+  + The interest rates in Brazil are left skewed.
+  + The median of the interest rates is significantly larger than the median of inflation rates.
++ US:
+  + The inflation rates are less dispersed than the interest rates.
+  + The median of the interest and inflation rate is not that different.
+  + We have many outliers for both inflation and interest rates.
 + US x Brazil:
-+ Both inflation and interest rates in Brazil have a greater dispersion than in US.
-+ Also, the both rates in Brazil have a higher median than in US.
+  + Both inflation and interest rates in Brazil have a greater dispersion than in US.
+  + Also, the both rates in Brazil have a higher median than in US.
+
   
 ## Descriptive Statistics
 
@@ -175,24 +175,30 @@ write_xlsx(data_us,"data_us.xlsx")
 
 ## Rates over Time
 
+### US
 ```{r, echo=FALSE}
 library(ggplot2)
 
 ggplot(data=data_us, aes(observation_date)) +
   geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
   geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
-  ggtitle("Interest and Inflation Rates Over Time")+
+  ggtitle("Interest and Inflation Rates Over Time USA")+
   ylab("Annualized Rate") +
   xlab("Time") +
   scale_y_continuous(labels = scales::percent) +
   theme(legend.position="bottom", legend.title= element_blank())
 
+# 
+
 ```
-+ We can see that for US, both rates were increasing until 1980
-+ Then they started to decline until 2020
+
++ We can see that for US, both rates were increasing until 1980.
++ Then they started to decline until 2020.
 + After 2020 the rates started to increase again.
 + Both rates have been moving in the same direction over the years, so they may be positively associated.
 + There was a long period 2010 and 2015, where we had very close to 0% interest rates.
+
+### Brazil
 
 ```{r, echo=FALSE, message=FALSE, results='hide'}
 #FOR ME TO FIND THE DATES
@@ -214,13 +220,10 @@ tail(last_time_max$observation_date,1)
 
 
 ```{r, echo=FALSE}
-
 ggplot(data=data_br, aes(observation_date)) +
-  #geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
-  #geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
   geom_line(aes(y = interest_brazil, colour = "Interest Rate Brazil")) +
   geom_line(aes(y = inflation_brazil, colour = "Inflation Rate Brazil"))+
-  ggtitle("Interest and Inflation Rates Over Time")+
+  ggtitle("Interest and Inflation Rates Over Time Brazil")+
   ylab("Annualized Rate") +
   xlab("Time") +
   scale_y_continuous(labels = scales::percent) +
@@ -230,7 +233,7 @@ ggplot(data=data_br, aes(observation_date)) +
 + Pertaining to Brazil, we have significantly less recorded data. Therefore, it is difficult to draw any conclusions.
 + For Brazil, we cannot conclude that there is a relationship between interest and inflation rates.
 
-```{r}
+```{r, echo=FALSE}
 scatter_us <- ggplot(data = data_us, aes(x=interest_us, y=inflation_us)) +
   geom_point()+
   ggtitle("Interest and Inflation Rate US")+
@@ -256,7 +259,8 @@ plot_grid(scatter_us, scatter_br, ncol = 2, nrow = 1)
 
 ## Analyzing Outliers
 
-```{r, echo=FALSE,message=FALSE, results='hide',fig.keep='all'}
+```{r, echo=FALSE,message=FALSE, results='hide',fig.keep='all', warning=FALSE}
+
 
 #Own function that creates the number in percentage form
 percent <- function(x, digits = 2, format = "f", ...) {
@@ -344,4 +348,31 @@ unique(format(subset$observation_date,"%Y"))
 
 ## Conclusion
 
++ The interest rate and inflation rate likely follow different distributions in Brazil and US.
++ For US the rates historically have been moving in the same direction.
++ The outliers for the rates occured in a 
++ The data from Brazil did not show us any relationship between rates.
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
+# brazil_cpi <- GetBCBData::gbcbd_get_series(
+# id = 433)
+# 
+# library(zoo)
+# 
+# # Set the window size to 12
+# window_size <- 12
+# 
+# brazil_cpi$value <- brazil_cpi$value/100 + 1
+# 
+# # Compute the rolling cumprod using rollapply()
+# rolling_cumprod <- rollapply(brazil_cpi$value, width = window_size, FUN = function(x) prod(x, na.rm = TRUE), align = "right", fill = NA)
+# 
+# # Drop the first (window_size - 1) elements, which have NAs
+# rolling_cumprod <- rolling_cumprod[window_size:length(brazil_cpi$value)]-1
+# 
+# # Print the results
+# print(rolling_cumprod)
+# 
+# plot(rolling_cumprod)
+```
 
