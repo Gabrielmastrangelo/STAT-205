@@ -1,18 +1,33 @@
 ---
 title: "R Notebook"
-output: html_notebook
+output:
+  html_document:
+    df_print: paged
 ---
 
 # Observational Study of Historical Behavior of Interest and Inflation Rates in Brazil and USA
 
 ## Introduction:
+- We gather inflation and interest rates between the USA and Brazil to find a relationship between their distributions. We will compare each country's descriptive statistics to come to a conclusion. 
+- If their distributions are similar we gain no new information and therefore there is no relationship between the two countries. Otherwise, we say that there is a relationship between them. 
+- We also want to investigate whether the inflation and interest rates are dependent (positively associated) so that we can understand if a change in interest rate drive a change in inflation rate.
+
+With the recent increase in inflation rates around the world.
+
+
+CPI: The Consumer Price Index is a measure of inflation and the buying habits of urban consumers. 
+- It includes prices for food, clothing, shelter, transportation, services, and sales taxes. 
+- The index is calculated by averaging price changes with weights representing their importance in consumer spending. 
+
+- The CPI is an index, to compute the annualized inflation rate, we need to compute (cpi_t12/cpi_0), since we have monthly data.
++ The interest rate is already annnualized
 
 ## Methodology:
 
 ## Conclusion:
 
 ### Importing libraries
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 library("tidyverse") #Manipulate Data
 library("ggplot2") #Library for Data Visualization
 library('readxl') #Read data from excel
@@ -22,16 +37,10 @@ library('GetBCBData') #Library to help to collect data from the BCB API (Central
 
 This excel files were downloaded from the FRED database of economical and financial data from USA.
 [ADD DESCRIPTION OF THE DATA, SEARCH IF FROM THE FRED WEBSITE]
-### Important notes:
-+ The CPI is an index, to compute the annualized inflation rate, we need to compute (cpi_t12/cpi_0), since we have monthly data.
-+ The interest rate is already annnualized
-
-CPI: The Consumer Price Index for All Urban Consumers (CPIAUCSL) is a measure of inflation and the buying habits of urban consumers. It includes prices for food, clothing, shelter, transportation, services, and sales taxes. The index is calculated by averaging price changes with weights representing their importance in consumer spending. 
-
 
 https://fred.stlouisfed.org/series/FEDFUNDS LINK interest rate
 https://fred.stlouisfed.org/series/CPIAUCSL LINK inflation rate
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 # https://fred.stlouisfed.org/series/FEDFUNDS for description
 cpi_us = read_excel('raw_data/CPIAUCSL.xls', skip = 10)
 interest_rate_us = read_excel('raw_data/FEDFUNDS.xls', skip = 10)
@@ -52,7 +61,7 @@ data_us
 
 ## Collecting Brazil Data
 We will collect the CDI from Brazil as an proxy of the interest rate, and the IPCA which is a proxy of the Brazillian CPI. We will use a library to help us collect the data from the BCB API.
-```{r}
+```{r, echo=FALSE, message=FALSE, results='hide'}
 
 #IPCA its brazillian CPI, it comes in monthly rate
 brazil_cpi <- GetBCBData::gbcbd_get_series(
@@ -75,7 +84,7 @@ data_br
 
 ## Descriptive Stats
 
-```{r}
+```{r, echo=FALSE}
 subset_us <- colnames(data_us)[-1]
 subset_br <- colnames(data_br)[-1]
 
@@ -83,7 +92,7 @@ summary(data_us[subset_us])
 summary(data_br[subset_br])
 ```
 ## Boxplot Data
-```{r}
+```{r, echo=FALSE}
 labels <- c(
   replicate(length(data_us$interest_us), 'Interest'),
   replicate(length(data_us$inflation_us), 'Inflation'),
@@ -117,11 +126,12 @@ ggplot(boxplot_data, aes(x=category, y=value, fill=category)) +
     title = 'Destribution of Interest and Inflation Rates by Country'
   ) +
   scale_y_continuous(labels = scales::percent) +
-  facet_grid(. ~ Country)
+  facet_grid(. ~ Country) +
+  theme(legend.position="bottom")
 ```
 
 Save the data_frame in a xlsx file
-```{r}
+```{r, echo=FALSE}
 library("writexl")
 write_xlsx(data_br,"data_br.xlsx")
 write_xlsx(data_us,"data_us.xlsx")
@@ -129,8 +139,8 @@ write_xlsx(data_us,"data_us.xlsx")
 
 ## Time Series for both Countries
 
-Merge Data
-```{r}
+
+```{r, echo=FALSE}
 
 ggplot(data=data_br, aes(observation_date)) +
   #geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
@@ -140,12 +150,14 @@ ggplot(data=data_br, aes(observation_date)) +
   ggtitle("Interest and Inflation Rates Over Time")+
   ylab("Annualized Rate") +
   xlab("Time") +
-  scale_y_continuous(labels = scales::percent)
-head(time_series)
+  scale_y_continuous(labels = scales::percent) +
+  theme(legend.position="bottom")
+
+
 ```
 
 
-```{r}
+```{r, echo=FALSE}
 library(ggplot2)
 
 ggplot(data=data_us, aes(observation_date)) +
@@ -154,34 +166,35 @@ ggplot(data=data_us, aes(observation_date)) +
   ggtitle("Interest and Inflation Rates Over Time")+
   ylab("Annualized Rate") +
   xlab("Time") +
-  scale_y_continuous(labels = scales::percent)
-head(time_series)
+  scale_y_continuous(labels = scales::percent) +
+  theme(legend.position="bottom")
+
 ```
 
-```{r}
+```{r, echo=FALSE, message=FALSE}
 ggplot(data = data_us, aes(x=interest_us, y=inflation_us)) +
   geom_point() +
   ggtitle("Interest and Inflation Rate USA")+
   ylab("Annualized Inflation Rate") +
   xlab("Annualized Interest Rate") +
   scale_y_continuous(labels = scales::percent)+
-  scale_x_continuous(labels = scales::percent)
-
+  scale_x_continuous(labels = scales::percent) +
+  theme(legend.position="bottom")
 ```
 
 
-```{r}
+```{r, echo=FALSE}
 ggplot(data = data_br, aes(x=interest_brazil, y=inflation_brazil)) +
   geom_point()+
   ggtitle("Interest and Inflation Rate Brazil")+
   ylab("Annualized Inflation Rate") +
   xlab("Annualized Interest Rate") +
   scale_y_continuous(labels = scales::percent)+
-  scale_x_continuous(labels = scales::percent)
-
-
+  scale_x_continuous(labels = scales::percent) +
+  theme(legend.position="bottom")
 ```
-```{r}
+
+```{r, echo=FALSE, results='hide',fig.keep='all'}
 quantiles_us <- quantile(data_us$inflation_us)
 iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
 
@@ -198,13 +211,12 @@ ggplot(data=data_us, aes(observation_date)) +
                 color = "blue", size=1) +
   geom_hline(yintercept=min_range, linetype="dashed", 
                 color = "blue", size=1) +
-  scale_y_continuous(labels = scales::percent) 
- 
-
-
+  scale_y_continuous(labels = scales::percent)  +
+  theme(legend.position="bottom")
 ```
+The years in which the inflation rate 
 
-```{r}
+```{r, echo=FALSE}
 quantiles_us <- quantile(data_us$inflation_us)
 iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
 
@@ -212,24 +224,9 @@ max_range =  quantiles_us[[4]] + 1.5*iqr_
 min_range = quantiles_us[[2]] - 1.5*iqr_
 
 subset <- data_us %>% filter(inflation_us > max_range)
-str(subset$observation_date)
 
 unique(format(subset$observation_date,"%Y"))
 ```
 
-# Influence of US interest rate in BR interest rate
-```{r}
-data_br$observation_date <- as.POSIXct(data_br$observation_date)
 
-merged_data <- merge(data_br, data_us, by="observation_date")
-
-ggplot(data = merged_data, aes(x=interest_us, y=interest_brazil)) +
-  geom_point() +
-  ggtitle("Relationship between interest rate in Brazil and USA")+
-  ylab("Interest Rate Brazil") +
-  xlab("Interest Rate USA") +
-  scale_y_continuous(labels = scales::percent)+
-  scale_x_continuous(labels = scales::percent)
-
-```
 
