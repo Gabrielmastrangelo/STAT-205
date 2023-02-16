@@ -1,19 +1,16 @@
 ---
-title: "R Notebook"
+title: "Interest x Inflation Rates"
 output:
   html_document:
     df_print: paged
 ---
 
-# Observational Study of Historical Behavior of Interest and Inflation Rates in Brazil and USA
-
 ## Introduction:
-- We gather inflation and interest rates between the USA and Brazil to find a relationship between their distributions. We will compare each country's descriptive statistics to come to a conclusion. 
-- If their distributions are similar we gain no new information and therefore there is no relationship between the two countries. Otherwise, we say that there is a relationship between them. 
-- We also want to investigate whether the inflation and interest rates are dependent (positively associated) so that we can understand if a change in interest rate drive a change in inflation rate.
 
-With the recent increase in inflation rates around the world.
-
++ In recent months, there has been a significant rise in inflation and interest rates around the world. This is largely due to factors such as supply chain disruptions, government stimulus measures, and a rebounding global economy after the COVID-19 pandemic.
++ Interest rates can have a significant impact on our daily lives, as they affect the cost of borrowing money for purchases such as homes, cars, and credit card debt. They also influence the return on savings and investments, such as bank accounts, bonds, and stocks.
++ We gather inflation and interest rates between the USA and Brazil, and compare their distributions. To see if they seem to follow the same distribution, or if they are different. 
++ We also want to investigate whether the inflation and interest rates are associated, if they move in the same direction. Are high inflation rates related to high interest rates and vice-versa?
 
 CPI: The Consumer Price Index is a measure of inflation and the buying habits of urban consumers. 
 - It includes prices for food, clothing, shelter, transportation, services, and sales taxes. 
@@ -24,22 +21,38 @@ CPI: The Consumer Price Index is a measure of inflation and the buying habits of
 
 ## Methodology:
 
-## Conclusion:
+### Data collection USA
++ CPI stands for Consumer Price Index, which is a measure of the average change in prices over time of a basket of goods and services commonly consumed by households.
++ We collected the CPI and interest rate from the Federal Reserve Economic Data (FRED) database. The CPI is used to calculate the annualized inflation rate.
++ The FED rate refers to the federal funds rate, which is the interest rate at which depository institutions (banks) lend or borrow funds from each other overnight to meet reserve requirements. It is one of the most important tools used by the Federal Reserve to implement monetary policy and manage the economy.
++ Links:
+  + FED Funds: https://fred.stlouisfed.org/series/FEDFUNDS
+  + CPI Series: https://fred.stlouisfed.org/series/CPIAUCSL
 
-### Importing libraries
+### Data collection Brazil
++ For Brazil we collected the data from the Brazil's Central Bank database (BCB).
++ We collected the CDI (interest rates) and inflation rates. Note: For Brazil, we got the inflation rate straight from the database, we did not need to compute it.
++ And we used a R library to collect the data from the API.
+
+```{=latex}
+The formula to compute the inflation rate from the CPI is:
+
+$$\text{Inflation Rate} = \frac{\text{CPI}_{\text{current}} - \text{CPI}_{\text{previous}}}{\text{CPI}_{\text{previous}}} \times 100\%$$
+
+where $\text{CPI}_{\text{current}}$ is the current Consumer Price Index and $\text{CPI}_{\text{previous}}$ is the previous Consumer Price Index.
+
+```
+
 ```{r, echo=FALSE, message=FALSE, results='hide'}
 library("tidyverse") #Manipulate Data
 library("ggplot2") #Library for Data Visualization
 library('readxl') #Read data from excel
 library('GetBCBData') #Library to help to collect data from the BCB API (Central Bank of Brazil)
+library("knitr")
+library("gridExtra")
+library("cowplot")
 ```
-## Collecting USA Data
 
-This excel files were downloaded from the FRED database of economical and financial data from USA.
-[ADD DESCRIPTION OF THE DATA, SEARCH IF FROM THE FRED WEBSITE]
-
-https://fred.stlouisfed.org/series/FEDFUNDS LINK interest rate
-https://fred.stlouisfed.org/series/CPIAUCSL LINK inflation rate
 ```{r, echo=FALSE, message=FALSE, results='hide'}
 # https://fred.stlouisfed.org/series/FEDFUNDS for description
 cpi_us = read_excel('raw_data/CPIAUCSL.xls', skip = 10)
@@ -59,8 +72,6 @@ data_us$interest_us <- data_us$interest_us/100
 data_us
 ```
 
-## Collecting Brazil Data
-We will collect the CDI from Brazil as an proxy of the interest rate, and the IPCA which is a proxy of the Brazillian CPI. We will use a library to help us collect the data from the BCB API.
 ```{r, echo=FALSE, message=FALSE, results='hide'}
 
 #IPCA its brazillian CPI, it comes in monthly rate
@@ -82,16 +93,8 @@ colnames(data_br) <- c('observation_date', 'interest_brazil', 'inflation_brazil'
 data_br
 ```
 
-## Descriptive Stats
+## Data Distribution
 
-```{r, echo=FALSE}
-subset_us <- colnames(data_us)[-1]
-subset_br <- colnames(data_br)[-1]
-
-summary(data_us[subset_us])
-summary(data_br[subset_br])
-```
-## Boxplot Data
 ```{r, echo=FALSE}
 labels <- c(
   replicate(length(data_us$interest_us), 'Interest'),
@@ -122,22 +125,92 @@ ggplot(boxplot_data, aes(x=category, y=value, fill=category)) +
   geom_boxplot() + 
   labs(
     y = 'Annualized Rate',
-    x = 'Category',
-    title = 'Destribution of Interest and Inflation Rates by Country'
+    x = '',
+    title = 'Distribution of Interest and Inflation Rates by Country'
   ) +
   scale_y_continuous(labels = scales::percent) +
   facet_grid(. ~ Country) +
-  theme(legend.position="bottom")
+  theme(legend.position="bottom", legend.title= element_blank())
 ```
 
-Save the data_frame in a xlsx file
++ The boxplot is used to compare the distribution of the inflation and interest rates, among each other, and among the countries.
++ Brazil:
++ The inflation and interest rates in Brazil have a similar dispersion.
++ And the interest rates in Brazil are left skewed.
++ The median of the interest rates is significantly larger than the median of inflation rates.
+* US:
++ The inflation rates are less dispersed than the interest rates.
++ The median of the interest and inflation rate is not that different.
++ We have many outliers for both inflation and interest rates.
++ US x Brazil:
++ Both inflation and interest rates in Brazil have a greater dispersion than in US.
++ Also, the both rates in Brazil have a higher median than in US.
+  
+## Descriptive Statistics
+
 ```{r, echo=FALSE}
+subset_us <- colnames(data_us)[-1]
+subset_br <- colnames(data_br)[-1]
+
+summary_us <- summary(data_us[subset_us])
+colnames(summary_us) <- c('Interest Rates US', 'Inflation Rates US')
+summary_us
+
+cat("\n")
+
+summary_br <- summary(data_br[subset_br])
+colnames(summary_br) <- c('Interest Rates BR', 'Inflation Rates BR')
+summary_br
+#TRY TO ADD IQR
+
+```
+
+```{r, echo=FALSE}
+#Save the data_frame in a xlsx file
+
 library("writexl")
 write_xlsx(data_br,"data_br.xlsx")
 write_xlsx(data_us,"data_us.xlsx")
 ```
 
-## Time Series for both Countries
+## Rates over Time
+
+```{r, echo=FALSE}
+library(ggplot2)
+
+ggplot(data=data_us, aes(observation_date)) +
+  geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
+  geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
+  ggtitle("Interest and Inflation Rates Over Time")+
+  ylab("Annualized Rate") +
+  xlab("Time") +
+  scale_y_continuous(labels = scales::percent) +
+  theme(legend.position="bottom", legend.title= element_blank())
+
+```
++ We can see that for US, both rates were increasing until 1980
++ Then they started to decline until 2020
++ After 2020 the rates started to increase again.
++ Both rates have been moving in the same direction over the years, so they may be positively associated.
++ There was a long period 2010 and 2015, where we had very close to 0% interest rates.
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
+#FOR ME TO FIND THE DATES
+library(tidyverse)
+library(lubridate)
+
+inflation_us_2022 <- data_us %>%
+          filter(year(observation_date) == 2022)
+
+max_2020 <- max(inflation_us_2022$inflation_us)
+
+inflation_us_2022$inflation_us == max_2020
+
+last_time_max <- data_us %>%
+          filter(inflation_us >= max_2020 & year(observation_date) < 2022) 
+
+tail(last_time_max$observation_date,1) 
+```
 
 
 ```{r, echo=FALSE}
@@ -151,40 +224,23 @@ ggplot(data=data_br, aes(observation_date)) +
   ylab("Annualized Rate") +
   xlab("Time") +
   scale_y_continuous(labels = scales::percent) +
-  theme(legend.position="bottom")
-
-
+  theme(legend.position="bottom", legend.title= element_blank())
 ```
 
++ Pertaining to Brazil, we have significantly less recorded data. Therefore, it is difficult to draw any conclusions.
++ For Brazil, we cannot conclude that there is a relationship between interest and inflation rates.
 
-```{r, echo=FALSE}
-library(ggplot2)
-
-ggplot(data=data_us, aes(observation_date)) +
-  geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
-  geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
-  ggtitle("Interest and Inflation Rates Over Time")+
-  ylab("Annualized Rate") +
-  xlab("Time") +
-  scale_y_continuous(labels = scales::percent) +
-  theme(legend.position="bottom")
-
-```
-
-```{r, echo=FALSE, message=FALSE}
-ggplot(data = data_us, aes(x=interest_us, y=inflation_us)) +
-  geom_point() +
-  ggtitle("Interest and Inflation Rate USA")+
+```{r}
+scatter_us <- ggplot(data = data_us, aes(x=interest_us, y=inflation_us)) +
+  geom_point()+
+  ggtitle("Interest and Inflation Rate US")+
   ylab("Annualized Inflation Rate") +
   xlab("Annualized Interest Rate") +
   scale_y_continuous(labels = scales::percent)+
   scale_x_continuous(labels = scales::percent) +
   theme(legend.position="bottom")
-```
 
-
-```{r, echo=FALSE}
-ggplot(data = data_br, aes(x=interest_brazil, y=inflation_brazil)) +
+scatter_br <- ggplot(data = data_br, aes(x=interest_brazil, y=inflation_brazil)) +
   geom_point()+
   ggtitle("Interest and Inflation Rate Brazil")+
   ylab("Annualized Inflation Rate") +
@@ -192,32 +248,90 @@ ggplot(data = data_br, aes(x=interest_brazil, y=inflation_brazil)) +
   scale_y_continuous(labels = scales::percent)+
   scale_x_continuous(labels = scales::percent) +
   theme(legend.position="bottom")
+
+plot_grid(scatter_us, scatter_br, ncol = 2, nrow = 1)
 ```
 
-```{r, echo=FALSE, results='hide',fig.keep='all'}
++ We can see that the interest and inflation rate are positively associated in US, but there is no clear relationship between them in Brazil.
+
+## Analyzing Outliers
+
+```{r, echo=FALSE,message=FALSE, results='hide',fig.keep='all'}
+
+#Own function that creates the number in percentage form
+percent <- function(x, digits = 2, format = "f", ...) {
+  paste0(formatC(100 * x, format = format, digits = digits, ...), "%")
+}
+
 quantiles_us <- quantile(data_us$inflation_us)
 iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
 
 max_range =  quantiles_us[[4]] + 1.5*iqr_
 min_range = quantiles_us[[2]] - 1.5*iqr_
 
-ggplot(data=data_us, aes(observation_date)) +
-  geom_line(aes(y = inflation_us, colour = "Inflation Rate USA"))+
-  #geom_line(aes(y = interest_us, colour = "Interest Rate USA")) +
-  ggtitle("Interest and Inflation Rates Over Time")+
-  ylab("Annualized Rate") +
-  xlab("Time") +
+inflation_us_plot <- ggplot(data=data_us, aes(observation_date)) +
+  geom_line(aes(y = inflation_us), color = 'red')+
+  labs(
+    title = "Inflation Rates Over Time US",
+    subtitle = "With the whiskers ",
+    x = "Time",
+    y = "Annualized Rate"
+  ) + 
   geom_hline(yintercept=max_range, linetype="dashed", 
                 color = "blue", size=1) +
   geom_hline(yintercept=min_range, linetype="dashed", 
                 color = "blue", size=1) +
   scale_y_continuous(labels = scales::percent)  +
-  theme(legend.position="bottom")
-```
-The years in which the inflation rate 
+  annotate('text', x=as.POSIXct("2020-08-01 UTC"), y = max_range + 0.0075, label=percent(max_range), size = 3) + 
+  annotate('text', x=as.POSIXct("2020-08-01 UTC"), y = min_range + 0.0075, label=percent(min_range), size = 3) +
+  
+  theme(legend.position="bottom", legend.title= element_blank())
 
-```{r, echo=FALSE}
+quantiles_us <- quantile(data_us$interest_us)
+iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
+
+max_range =  quantiles_us[[4]] + 1.5*iqr_
+min_range = quantiles_us[[2]] - 1.5*iqr_
+
+interest_us_plot <- ggplot(data=data_us, aes(observation_date)) +
+  geom_line(aes(y = interest_us), color = 'orange', show.legend =TRUE)+
+  labs(
+    title = "Interest Rates Over Time US",
+    subtitle = "With the whiskers ",
+    x = "Time",
+    y = "Annualized Rate"
+  ) + 
+  geom_hline(aes(yintercept=max_range), linetype="dashed", 
+                color = "blue", size=1) +
+  geom_hline(yintercept=min_range, linetype="dashed", 
+                color = "blue", size=1) +
+  scale_y_continuous(labels = scales::percent) +
+  annotate('text', x=as.POSIXct("2020-08-01 UTC"), y = max_range + 0.01, label=percent(max_range), size = 3) + 
+  annotate('text', x=as.POSIXct("2020-08-01 UTC"), y = min_range + 0.01, label=percent(min_range), size = 3) +
+  
+  theme(legend.position="bottom")
+
+plot_grid(inflation_us_plot, interest_us_plot, ncol = 2, nrow = 1)
+
+```
+
++ This graph confirms the existance of outliers as seen in the boxplot. But it shows, that the outliers ocurred over the same period of time
++ For inflation rate, it happened from 1973 to 1981.
++ For interest rate, it happened from 1979 to 1980
+
+```{r, echo=FALSE, message=FALSE, results='hide'}
+#Searching the dates that the outliers occured
 quantiles_us <- quantile(data_us$inflation_us)
+iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
+
+max_range =  quantiles_us[[4]] + 1.5*iqr_
+min_range = quantiles_us[[2]] - 1.5*iqr_
+
+subset <- data_us %>% filter(inflation_us > max_range)
+
+unique(format(subset$observation_date,"%Y"))
+
+quantiles_us <- quantile(data_us$interest_us)
 iqr_ <- quantiles_us[[4]]-quantiles_us[[2]]
 
 max_range =  quantiles_us[[4]] + 1.5*iqr_
@@ -228,5 +342,6 @@ subset <- data_us %>% filter(inflation_us > max_range)
 unique(format(subset$observation_date,"%Y"))
 ```
 
+## Conclusion
 
 
